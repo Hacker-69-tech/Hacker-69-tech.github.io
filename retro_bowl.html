@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Retro Bowl Clone</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #4CAF50;
+            border: 3px solid white;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const player = { x: 50, y: 200, width: 20, height: 20, color: "blue" };
+        const ball = { x: player.x + player.width, y: player.y, size: 5, speed: 7, thrown: false };
+        const receivers = [
+            { x: 700, y: 100, width: 20, height: 20, color: "yellow", speed: 2 },
+            { x: 700, y: 300, width: 20, height: 20, color: "yellow", speed: -2 }
+        ];
+        const defenders = [
+            { x: 400, y: 150, width: 20, height: 20, color: "red", speed: 3 },
+            { x: 500, y: 250, width: 20, height: 20, color: "red", speed: -3 }
+        ];
+        
+        let score = 0;
+
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function drawReceivers() {
+            receivers.forEach(receiver => {
+                ctx.fillStyle = receiver.color;
+                ctx.fillRect(receiver.x, receiver.y, receiver.width, receiver.height);
+            });
+        }
+
+        function drawDefenders() {
+            defenders.forEach(defender => {
+                ctx.fillStyle = defender.color;
+                ctx.fillRect(defender.x, defender.y, defender.width, defender.height);
+            });
+        }
+
+        function drawBall() {
+            if (ball.thrown) {
+                ctx.fillStyle = "brown";
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawScore() {
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText("Score: " + score, 10, 20);
+        }
+
+        function update() {
+            if (ball.thrown) {
+                ball.x += ball.speed;
+
+                // Check for catches
+                receivers.forEach((receiver, index) => {
+                    if (
+                        ball.x < receiver.x + receiver.width &&
+                        ball.x + ball.size > receiver.x &&
+                        ball.y < receiver.y + receiver.height &&
+                        ball.y + ball.size > receiver.y
+                    ) {
+                        score++;
+                        resetPlay("Catch Successful!");
+                    }
+                });
+
+                // Check for defenders blocking
+                defenders.forEach(defender => {
+                    if (
+                        ball.x < defender.x + defender.width &&
+                        ball.x + ball.size > defender.x &&
+                        ball.y < defender.y + defender.height &&
+                        ball.y + ball.size > defender.y
+                    ) {
+                        resetPlay("Pass Blocked!");
+                    }
+                });
+
+                if (ball.x > canvas.width) {
+                    resetPlay("Missed the Catch!");
+                }
+            }
+
+            // Move receivers
+            receivers.forEach(receiver => {
+                receiver.y += receiver.speed;
+                if (receiver.y <= 0 || receiver.y + receiver.height >= canvas.height) {
+                    receiver.speed *= -1;
+                }
+            });
+
+            // Move defenders
+            defenders.forEach(defender => {
+                defender.y += defender.speed;
+                if (defender.y <= 0 || defender.y + defender.height >= canvas.height) {
+                    defender.speed *= -1;
+                }
+            });
+        }
+
+        function resetPlay(message) {
+            alert(message);
+            ball.thrown = false;
+            ball.x = player.x + player.width;
+            ball.y = player.y + player.height / 2;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawReceivers();
+            drawDefenders();
+            drawBall();
+            drawScore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.code === "Space" && !ball.thrown) {
+                ball.thrown = true;
+                ball.x = player.x + player.width;
+                ball.y = player.y + player.height / 2;
+            }
+            if (e.code === "ArrowUp") {
+                player.y -= 10;
+            }
+            if (e.code === "ArrowDown") {
+                player.y += 10;
+            }
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
