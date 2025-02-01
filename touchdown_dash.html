@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Touchdown Dash</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const player = { x: 50, y: 200, width: 20, height: 20, color: "blue", speed: 5 }; // The QB
+        const teammate1 = { x: 100, y: 200, width: 20, height: 20, color: "lightblue", speed: 4 }; // Teammate 1
+        const teammate2 = { x: 150, y: 200, width: 20, height: 20, color: "dodgerblue", speed: 4 }; // Teammate 2
+        const defenders = Array.from({ length: 25 }, () => ({ x: Math.random() * 800, y: Math.random() * 300 + 50, width: 20, height: 20, color: "red", speed: 3 }));
+        const endzone = { x: 780, y: 0, width: 20, height: 400, color: "gold" };
+
+        let score = 0;
+        let lives = 3;
+        let ballPossession = "player"; // Tracks who has the ball: player, teammate1, or teammate2
+
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function drawTeammates() {
+            ctx.fillStyle = teammate1.color;
+            ctx.fillRect(teammate1.x, teammate1.y, teammate1.width, teammate1.height);
+            
+            ctx.fillStyle = teammate2.color;
+            ctx.fillRect(teammate2.x, teammate2.y, teammate2.width, teammate2.height);
+        }
+
+        function drawDefenders() {
+            defenders.forEach(defender => {
+                ctx.fillStyle = defender.color;
+                ctx.fillRect(defender.x, defender.y, defender.width, defender.height);
+            });
+        }
+
+        function drawEndzone() {
+            ctx.fillStyle = endzone.color;
+            ctx.fillRect(endzone.x, endzone.y, endzone.width, endzone.height);
+        }
+
+        function drawScore() {
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText(`Score: ${score}`, 10, 20);
+            ctx.fillText(`Lives: ${lives}`, 10, 50);
+        }
+
+        function passBall() {
+            if (ballPossession === "player") {
+                if (Math.abs(player.x - teammate1.x) < 50) {
+                    ballPossession = "teammate1";
+                } else if (Math.abs(player.x - teammate2.x) < 50) {
+                    ballPossession = "teammate2";
+                }
+            }
+        }
+
+        function update() {
+            // Movement of defenders
+            defenders.forEach(defender => {
+                defender.y += defender.speed;
+                if (defender.y <= 0 || defender.y + defender.height >= canvas.height) {
+                    defender.speed *= -1;
+                }
+
+                // Check for collisions with defenders
+                if (
+                    (ballPossession === "player" && player.x < defender.x + defender.width && player.x + player.width > defender.x && player.y < defender.y + defender.height && player.y + player.height > defender.y) ||
+                    (ballPossession === "teammate1" && teammate1.x < defender.x + defender.width && teammate1.x + teammate1.width > defender.x && teammate1.y < defender.y + defender.height && teammate1.y + teammate1.height > defender.y) ||
+                    (ballPossession === "teammate2" && teammate2.x < defender.x + defender.width && teammate2.x + teammate2.width > defender.x && teammate2.y < defender.y + defender.height && teammate2.y + teammate2.height > defender.y)
+                ) {
+                    loseLife("Tackled by Defender!");
+                }
+            });
+
+            // Movement of teammates
+            if (ballPossession === "teammate1") {
+                teammate1.x += teammate1.speed;
+            } else if (ballPossession === "teammate2") {
+                teammate2.x += teammate2.speed;
+            }
+
+            // Check for touchdown
+            if (
+                (ballPossession === "teammate1" && teammate1.x < endzone.x + endzone.width && teammate1.x + teammate1.width > endzone.x) ||
+                (ballPossession === "teammate2" && teammate2.x < endzone.x + endzone.width && teammate2.x + teammate2.width > endzone.x)
+            ) {
+                score++;
+                resetPlay("Touchdown!");
+            }
+        }
+
+        function resetPlay(message) {
+            if (message) alert(message);
+            player.x = 50;
+            player.y = 200;
+            teammate1.x = 100;
+            teammate1.y = 200;
+            teammate2.x = 150;
+            teammate2.y = 200;
+            ballPossession = "player";
+        }
+
+        function loseLife(message) {
+            alert(message);
+            lives--;
+            if (lives <= 0) {
+                alert(`Game Over! Final Score: ${score}. Press OK to restart.`);
+                document.location.reload();
+            } else {
+                resetPlay("");
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawTeammates();
+            drawDefenders();
+            drawEndzone();
+            drawScore();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.code === "ArrowUp") {
+                if (ballPossession === "player") player.y -= player.speed;
+                else if (ballPossession === "teammate1") teammate1.y -= teammate1.speed;
+                else if (ballPossession === "teammate2") teammate2.y -= teammate2.speed;
+                if (player.y < 0) player.y = 0;
+                if (teammate1.y < 0) teammate1.y = 0;
+                if (teammate2.y < 0) teammate2.y = 0;
+            }
+            if (e.code === "ArrowDown") {
+                if (ballPossession === "player") player.y += player.speed;
+                else if (ballPossession === "teammate1") teammate1.y += teammate1.speed;
+                else if (ballPossession === "teammate2") teammate2.y += teammate2.speed;
+                if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+                if (teammate1.y + teammate1.height > canvas.height) teammate1.y = canvas.height - teammate1.height;
+                if (teammate2.y + teammate2.height > canvas.height) teammate2.y = canvas.height - teammate2.height;
+            }
+            if (e.code === "ArrowRight") {
+                if (ballPossession === "player") player.x += player.speed;
+                else if (ballPossession === "teammate1") teammate1.x += teammate1.speed;
+                else if (ballPossession === "teammate2") teammate2.x += teammate2.speed;
+                if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+                if (teammate1.x + teammate1.width > canvas.width) teammate1.x = canvas.width - teammate1.width;
+                if (teammate2.x + teammate2.width > canvas.width) teammate2.x = canvas.width - teammate2.width;
+            }
+            if (e.code === "ArrowLeft") {
+                if (ballPossession === "player") player.x -= player.speed;
+                else if (ballPossession === "teammate1") teammate1.x -= teammate1.speed;
+                else if (ballPossession === "teammate2") teammate2.x -= teammate2.speed;
+                if (player.x < 0) player.x = 0;
+                if (teammate1.x < 0) teammate1.x = 0;
+                if (teammate2.x < 0) teammate2.x = 0;
+            }
+            if (e.code === "Space") {
+                passBall();
+            }
+            if (e.code === "KeyR") {
+                document.location.reload();
+            }
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
